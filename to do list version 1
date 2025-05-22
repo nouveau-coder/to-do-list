@@ -1,0 +1,28 @@
+todolist = []
+while True:
+    print('''
+1.add task
+2.remove task
+3.view all tasks
+4.exit program 
+''')
+    ch = int(input('enter choice:'))
+    if ch == 1:
+        task = input('enter task:')
+        todolist.append(task)
+        print('task added')
+    elif ch == 2:
+        task = input('remove task:')
+        if task in todolist:
+            todolist.remove(task)
+        else:
+            print('task does not exist in to do list')
+    elif ch == 3:
+        for i in todolist:
+            print(i)
+    elif ch == 4:
+        print('exiting program')
+        break
+    else:
+        print('invalid choice')
+
