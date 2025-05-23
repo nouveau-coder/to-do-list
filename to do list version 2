@@ -1,0 +1,60 @@
+import pickle
+def add_task():
+    todolist = None
+    with open('todolist.dat','rb') as f:
+        try:
+            todolist = pickle.load(f)
+        except EOFError:
+            todolist = []
+    task = input('enter task to add:')
+    if task in todolist:
+        print('task already present:')
+    else:
+        todolist.append(task)
+        with open('todolist.dat','wb') as f:
+            pickle.dump(todolist,f)
+        print('task added')
+
+def remove_task():
+    todolist = None
+    with open('todolist.dat','rb') as f:
+        try:
+            todolist = pickle.load(f)
+            task = input('enter task to remove:')
+            if task in todolist:
+                todolist.remove(task)
+                print('task removed')
+            else:
+                print('task not present in to do list')
+        except EOFError:
+            print('no tasks present in todolist')
+            todolist = []
+    with open('todolist.dat','wb') as f:
+        pickle.dump(todolist,f)
+
+def view_tasks():
+    todolist = None
+    with open('todolist.dat','rb') as f:
+        try:
+            todolist = pickle.load(f)
+            for task in todolist:
+                print(task)
+        except EOFError:
+            print('no items present in to do list')
+
+
+while True:
+    print('''1.add task
+2.remove task
+3.view all tasks
+4.exit''')
+    ch = int(input('enter choice'))
+    if ch == 1:
+        add_task()
+    elif ch == 2:
+        remove_task()
+    elif ch == 3:
+        view_tasks()
+    elif ch == 4:
+        print('exiting program')
+        break
