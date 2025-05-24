@@ -1,28 +1,61 @@
-todolist = []
+import pickle
+def add_task():
+    todolist = None
+    with open('todolist.dat','rb') as f:
+        try:
+            todolist = pickle.load(f)
+        except EOFError:
+            todolist = []
+    task = input('enter task to add:')
+    if task in todolist:
+        print('task already present:')
+    else:
+        todolist.append(task)
+        with open('todolist.dat','wb') as f:
+            pickle.dump(todolist,f)
+        print('task added')
+
+def remove_task():
+    todolist = None
+    with open('todolist.dat','rb') as f:
+        try:
+            todolist = pickle.load(f)
+            task = input('enter task to remove:')
+            if task in todolist:
+                todolist.remove(task)
+                print('task removed')
+            else:
+                print('task not present in to do list')
+        except EOFError:
+            print('no tasks present in todolist')
+            todolist = []
+    with open('todolist.dat','wb') as f:
+        pickle.dump(todolist,f)
+
+def view_tasks():
+    todolist = None
+    with open('todolist.dat','rb') as f:
+        try:
+            todolist = pickle.load(f)
+            for task in todolist:
+                print(task)
+        except EOFError:
+            print('no items present in to do list')
+
+
 while True:
-    print('''
-1.add task
+    print('''1.add task
 2.remove task
 3.view all tasks
-4.exit program 
-''')
-    ch = int(input('enter choice:'))
+4.exit''')
+    ch = int(input('enter choice'))
     if ch == 1:
-        task = input('enter task:')
-        todolist.append(task)
-        print('task added')
+        add_task()
     elif ch == 2:
-        task = input('remove task:')
-        if task in todolist:
-            todolist.remove(task)
-        else:
-            print('task does not exist in to do list')
+        remove_task()
     elif ch == 3:
-        for i in todolist:
-            print(i)
+        view_tasks()
     elif ch == 4:
         print('exiting program')
         break
-    else:
-        print('invalid choice')
 
