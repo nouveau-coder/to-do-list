@@ -1,61 +1,27 @@
-import pickle
-def add_task():
-    todolist = None
-    with open('todolist.dat','rb') as f:
-        try:
-            todolist = pickle.load(f)
-        except EOFError:
-            todolist = []
-    task = input('enter task to add:')
-    if task in todolist:
-        print('task already present:')
+import mysql.connector as ms
+import random
+con = ms.connect(host='localhost', username='root', password='1234', database='todolist')
+cur = con.cursor()
+'''
+def signup():
+    name = input('Enter your name: ')
+    password = input('Enter your password: ')
+    user_id = random.randint(1000, 9999)
+    print(f'Your user ID is: {user_id}. Please remember it for future logins.')
+    cur.execute('INSERT INTO users (userid, name, password) VALUES (%s, %s, %s)', (user_id, name, password))
+    con.commit()
+    print('Signup successful!')
+'''
+def login():
+    user_id = input('Enter your user ID: ')
+    password = input('Enter your password: ')
+    cur.execute('SELECT * FROM users WHERE userid = %s AND password = %s', (user_id, password))
+    result = cur.fetchone()
+    if result:
+        print(f'Welcome {result[1]}!')
+        return user_id
     else:
-        todolist.append(task)
-        with open('todolist.dat','wb') as f:
-            pickle.dump(todolist,f)
-        print('task added')
+        print('Invalid user ID or password. Please try again.')
+        return None
 
-def remove_task():
-    todolist = None
-    with open('todolist.dat','rb') as f:
-        try:
-            todolist = pickle.load(f)
-            task = input('enter task to remove:')
-            if task in todolist:
-                todolist.remove(task)
-                print('task removed')
-            else:
-                print('task not present in to do list')
-        except EOFError:
-            print('no tasks present in todolist')
-            todolist = []
-    with open('todolist.dat','wb') as f:
-        pickle.dump(todolist,f)
-
-def view_tasks():
-    todolist = None
-    with open('todolist.dat','rb') as f:
-        try:
-            todolist = pickle.load(f)
-            for task in todolist:
-                print(task)
-        except EOFError:
-            print('no items present in to do list')
-
-
-while True:
-    print('''1.add task
-2.remove task
-3.view all tasks
-4.exit''')
-    ch = int(input('enter choice'))
-    if ch == 1:
-        add_task()
-    elif ch == 2:
-        remove_task()
-    elif ch == 3:
-        view_tasks()
-    elif ch == 4:
-        print('exiting program')
-        break
-
+login()
