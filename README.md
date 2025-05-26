@@ -1,23 +1,23 @@
 # **TopProductiv**
 - this project is a simple to do list that can help boost your productivity
 
-# **Languages Used**: 
+## **Languages Used**: 
 
 - python
 
-# **Modules/Libraries Used**: 
+## **Modules/Libraries Used**: 
 
 - mysql.connector (for database connectivity)
 
 - random (for generation of user id)
 
-# **Sources Consulted**:
+## **Sources Consulted**:
 
 - w3schools
 
 - geeksforgeeks
 
-# **How to Use**:
+## **How to Use**:
 
 - Install MySQL if not already installed. Set password and username.
 
@@ -43,7 +43,7 @@
 
 - Click run to add, remove, view tasks.
 
-# **Future Plans**: 
+## **Future Plans**: 
 
 - Creation of a GUI
 
