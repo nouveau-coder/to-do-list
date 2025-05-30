@@ -2,7 +2,7 @@ import mysql.connector as ms
 
 class Database:
     def __init__(self):
-        self.con = ms.connect(host='localhost', username='root', password='1234', database='todolist')
+        self.con = ms.connect(host='localhost', username='root', password='1234')
         self.cur = self.con.cursor()
     
     def create_tables(self):
