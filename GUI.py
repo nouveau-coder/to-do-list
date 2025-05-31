@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox
-from commands import ToDoListAppCommands # Use the renamed class
+from commands import ToDoListApp # Use the renamed class
 
 class ToDoAppGUI: # Renamed for clarity as the GUI part
-    def __init__(self, root: tk.Tk, app_commands: ToDoListAppCommands):
+    def __init__(self, root: tk.Tk, app_commands: ToDoListApp):
         self.root = root
         self.root.title("To-Do List App")
         self.root.geometry("600x550") # Set a default window size
