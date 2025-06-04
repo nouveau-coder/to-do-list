@@ -57,7 +57,7 @@ class Database:
                 else:
                     self.con.commit()
                     logger.info("Database transaction committed successfully.") # Replaced print
-            except mysql.connector.Error as err:
+            except mysql.Error as err:
                 logger.error(f"Error during commit/rollback: {err}", exc_info=True) # Replaced print, added exc_info
             finally:
                 try:
@@ -66,7 +66,7 @@ class Database:
                     if self.con:
                         self.con.close()
                     logger.info("Database connection and cursor closed.") # Replaced print
-                except mysql.connector.Error as err:
+                except mysql.Error as err:
                     logger.error(f"Error during connection closure: {err}", exc_info=True) # Replaced print, added exc_info
         else:
             logger.info("No active database connection to close upon exiting context.") # Replaced print
@@ -92,7 +92,7 @@ class Database:
                 )
             """)
             logger.info("Tables checked/created successfully.") 
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error creating tables: {err}", exc_info=True) 
             raise
     
@@ -105,10 +105,10 @@ class Database:
             user_id = self.cursor.lastrowid
             logger.info(f"User '{name}' added successfully with ID: {user_id}.")
             return user_id
-        except mysql.connector.IntegrityError as err:
+        except mysql.IntegrityError as err:
             logger.error(f"Error adding user '{name}': Duplicate name. {err}", exc_info=True)
             raise ValueError(f"Username '{name}' already exists.")
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error adding user '{name}': {err}", exc_info=True)
             raise
     
@@ -138,10 +138,10 @@ class Database:
             task_id = self.cursor.lastrowid
             logger.info(f"Task '{task}' added successfully for user_id {user_id} with ID: {task_id}.")
             return task_id
-        except mysql.connector.IntegrityError as err:
+        except mysql.IntegrityError as err:
             logger.error(f"Error adding task for user_id {user_id}: User ID does not exist or invalid data. {err}", exc_info=True)
             raise ValueError(f"User with ID {user_id} does not exist or task data is invalid.")
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error adding task for user_id {user_id} and task '{task}': {err}", exc_info=True)
             raise
     
@@ -175,7 +175,7 @@ class Database:
             else:
                 logger.info(f"Task ID {task_id} not found or not deleted for user_id {user_id}.")
                 return False
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error deleting task ID {task_id} for user_id {user_id}: {err}", exc_info=True)
             raise
     
@@ -196,7 +196,7 @@ class Database:
             else:
                 logger.info(f"Task ID {task_id} not found or status not updated for user_id {user_id}.")
                 return False
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error updating task ID {task_id} status for user_id {user_id}: {err}", exc_info=True)
             raise
     
