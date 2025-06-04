@@ -84,11 +84,13 @@ class Database:
             """)
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS tasks (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    task varchar(100) NOT NULL,
-                    task_status varchar(15) DEFAULT 'pending',
-                    FOREIGN KEY (user_id) REFERENCES users(id)
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                task VARCHAR(100) NOT NULL,
+                task_status VARCHAR(15) DEFAULT 'pending',
+                due_date DATE,       -- Add this line
+                priority INT,        -- Add this line
+                FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
             logger.info("Tables checked/created successfully.") 
@@ -158,45 +160,56 @@ class Database:
             else:
                 logger.info(f"No tasks found for user_id: {user_id}.")
             return tasks
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error retrieving tasks for user_id {user_id}: {err}", exc_info=True)
             raise
     
-    def delete_task(self, user_id: int, task_id: int):
+    def delete_task(self, user_id: int, task_id: int) -> bool:
         try:
             self.cursor.execute(
-                "DELETE FROM tasks WHERE user_id = %s AND id = %s",
+                "DELETE FROM tasks WHERE user_id = %s AND id = %s", # CRITICAL: Include user_id
                 (user_id, task_id)
             )
-
             if self.cursor.rowcount > 0:
-                logger.info(f"Task ID {task_id} deleted successfully for user_id {user_id}.")
+                logger.info(f"Database: Task ID {task_id} deleted successfully for user_id {user_id}.")
                 return True
             else:
-                logger.info(f"Task ID {task_id} not found or not deleted for user_id {user_id}.")
+                logger.info(f"Database: Task ID {task_id} not found or not deleted for user_id {user_id}.")
                 return False
         except mysql.Error as err:
-            logger.error(f"Error deleting task ID {task_id} for user_id {user_id}: {err}", exc_info=True)
+            logger.error(f"Database: Error deleting task ID {task_id} for user_id {user_id}: {err}", exc_info=True)
             raise
     
-    def update_task_status(self, user_id: int, task_id: int, status: str):
-        if status not in ['pending', 'completed']:
-            logger.warning(f"Invalid task status '{status}' for user_id {user_id} and task_id {task_id}.")
-            raise ValueError("Task status must be either 'pending' or 'completed'.")
+    def update_task(self, user_id: int, task_id: int, task_name: str = None, due_date: date = None, priority: int = None) -> bool:
+        updates = []
+        params = []
+
+        if task_name is not None:
+            updates.append("task = %s") # Use 'task' column name
+            params.append(task_name)
+        if due_date is not None:
+            updates.append("due_date = %s")
+            params.append(due_date)
+        if priority is not None:
+            updates.append("priority = %s")
+            params.append(priority)
+
+        if not updates:
+            logger.info(f"No update parameters provided for task ID {task_id} (user_id: {user_id}).")
+            return False
+
+        query = "UPDATE tasks SET " + ", ".join(updates) + " WHERE user_id = %s AND id = %s"
+        params.extend([user_id, task_id]) # Add user_id and task_id to the parameters
 
         try:
-            self.cursor.execute(
-                "UPDATE tasks SET task_status = %s WHERE user_id = %s AND id = %s",
-                (status, user_id, task_id)
-            )
+            self.cursor.execute(query, tuple(params))
 
             if self.cursor.rowcount > 0:
-                logger.info(f"Task ID {task_id} status updated to '{status}' for user_id {user_id}.")
+                logger.info(f"Database: Task ID {task_id} updated successfully for user_id {user_id}.")
                 return True
             else:
-                logger.info(f"Task ID {task_id} not found or status not updated for user_id {user_id}.")
+                logger.info(f"Database: Task ID {task_id} not found or no changes applied for user_id {user_id}.")
                 return False
         except mysql.Error as err:
-            logger.error(f"Error updating task ID {task_id} status for user_id {user_id}: {err}", exc_info=True)
+            logger.error(f"Database: Error updating task ID {task_id} for user_id {user_id}: {err}", exc_info=True)
             raise
-    
