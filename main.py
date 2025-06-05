@@ -1,44 +1,25 @@
-# main.py
+import logging
 import tkinter as tk
 from database import Database
 from commands import ToDoListApp
-from GUI import ToDoAppGUI
-from tkinter import messagebox # Import messagebox for error display
+from GUI import ToDoListGUI 
+
+logger = logging.getLogger(__name__)
 
 def main():
-    # 1. Initialize the database connection
-    # Corrected: changed 'username' to 'user' to match Database.__init__
-    db = Database()
+    db_conn_instance = None
+    try:
+        db_conn_instance = Database()
+        app = ToDoListApp(db_conn_instance)
+        app.setup_database()
 
-    # Check if database connection was successful before proceeding
-    if not db.con or not db.con.is_connected():
-        print("Application cannot start: Failed to connect to the database.")
         root = tk.Tk()
-        root.withdraw() # Hide the main window
-        messagebox.showerror("Database Error", "Failed to connect to the database. Please ensure MySQL is running and credentials are correct.")
-        root.destroy()
-        return
+        gui = ToDoListGUI(root, app)
+        root.mainloop()
 
-    # 2. Ensure necessary tables are created in the database
-    db.create_tables()
-
-    # 3. Initialize the application commands/logic layer, injecting the database instance
-    app_commands = ToDoListApp(db)
-
-    # 4. Initialize the GUI, injecting the commands layer
-    root = tk.Tk()
-    app = ToDoAppGUI(root, app_commands)
-
-    # 5. Run the GUI application
-    app.run()
-
-    # The database connection will be closed by app._on_closing when the GUI window is closed.
-    # If the app exits unexpectedly, you might want a more robust cleanup.
-    # A simple 'finally' block can ensure this:
-    # try:
-    #     app.run()
-    # finally:
-    #     db.close_connection() # Ensure connection is closed even if app.run() crashes
+    except Exception as e:
+         logger.critical(f"Application encountered a critical error: {e}", exc_info=True)
+         print(f"FATAL ERROR: Application could not run. Check logs for details.")
 
 if __name__ == "__main__":
     main()
