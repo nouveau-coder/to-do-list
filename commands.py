@@ -217,7 +217,7 @@ class ToDoListApp:
                 
                 return "Your Tasks:\n" + "\n".join(formatted_tasks)
 
-        except mysql.connector.Error as e:
+        except mysql.Error as e:
             logger.error(f"App: Database error retrieving tasks for user_id {user_id}: {e}", exc_info=True)
             return "Error: A database problem occurred while retrieving tasks."
         except Exception as e:
