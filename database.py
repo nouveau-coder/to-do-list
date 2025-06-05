@@ -1,8 +1,9 @@
 import mysql.connector as mysql
 import os
 from dotenv import load_dotenv
+from datetime import date
 import logging 
-logger = logging.getLogger(__name__) # __name__ will be 'database' here
+logger = logging.getLogger(__name__) 
 
 class Database:
     def __init__(self):
@@ -25,7 +26,7 @@ class Database:
             )
             self.cursor = self.con.cursor()
             logger.info("Database connection established successfully.") # Replaced print
-        except mysql.connector.Error as err:
+        except mysql.Error as err:
             logger.error(f"Error connecting to database: {err}", exc_info=True) # Replaced print, added exc_info
             self.con = None
             self.cursor = None
@@ -42,7 +43,7 @@ class Database:
                 self.con = mysql.connect(host=db_host, user=db_user, password=db_password, database=db_name, dictionary=True)
                 self.cursor = self.con.cursor()
                 logger.info("Database re-connection established.") # Replaced print
-            except mysql.connector.Error as err:
+            except mysql.Error as err:
                 logger.error(f"Error during re-connection in __enter__: {err}", exc_info=True) # Replaced print, added exc_info
                 raise
 
@@ -147,22 +148,25 @@ class Database:
             logger.error(f"Error adding task for user_id {user_id} and task '{task}': {err}", exc_info=True)
             raise
     
-    def get_tasks(self, user_id: int):
+    def get_tasks(self, user_id: int) -> list[tuple]:
+        """
+        Retrieves all tasks for a specific user from the database.
+        Returns a list of tuples, where each tuple is a task row.
+        """
         try:
             self.cursor.execute(
-                "SELECT id, task, task_status FROM tasks WHERE user_id = %s ORDER BY id ASC",
-                (user_id,)
+                "SELECT id, task, task_status, due_date, priority FROM tasks WHERE user_id = %s ORDER BY id ASC",
+                (user_id,) # <--- CRITICAL: Filter by user_id
             )
             tasks = self.cursor.fetchall()
-
             if tasks:
-                logger.info(f"Retrieved {len(tasks)} tasks for user_id: {user_id}.")
+                logger.info(f"Database: Retrieved {len(tasks)} tasks for user_id: {user_id}.")
             else:
-                logger.info(f"No tasks found for user_id: {user_id}.")
+                logger.info(f"Database: No tasks found for user_id: {user_id}.")
             return tasks
-        except mysql.Error as err:
-            logger.error(f"Error retrieving tasks for user_id {user_id}: {err}", exc_info=True)
-            raise
+        except mysql.connector.Error as err:
+            logger.error(f"Database: Error retrieving tasks for user_id {user_id}: {err}", exc_info=True)
+            raise # Re-raise the database error for the calling layer (commands.py) to handle
     
     def delete_task(self, user_id: int, task_id: int) -> bool:
         try:
