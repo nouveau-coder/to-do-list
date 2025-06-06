@@ -1,5 +1,7 @@
+# commands.py
+
 from database import Database
-from datetime import datetime
+from datetime import datetime, date # Import date as well for type hinting if needed
 import logging
 import bcrypt
 import mysql.connector as mysql
@@ -54,7 +56,7 @@ class ToDoListApp:
         except Exception as e:
             logger.critical(f"An unexpected error occurred during registration for '{username}': {e}", exc_info=True)
             return "Error: An unexpected application error occurred during registration."
-    
+
     def authenticate_user(self, username: str, password: str) -> tuple[int | None, str]:
         if not username or not password:
             logger.warning("Authentication attempt with empty username or password.")
@@ -66,8 +68,8 @@ class ToDoListApp:
                 result = conn.cursor.fetchone()
 
                 if result:
-                    user_id = result[0]
-                    stored_hashed_password = result[1]
+                    user_id = result['id']
+                    stored_hashed_password = result['password']
 
                     if bcrypt.checkpw(password.encode('utf-8'), stored_hashed_password.encode('utf-8')):
                         logger.info(f"User '{username}' (ID: {user_id}) authenticated successfully.")
@@ -79,10 +81,10 @@ class ToDoListApp:
                     logger.warning(f"Authentication failed: User '{username}' not found.")
                     return None, "Error: Invalid username or password."
 
-        except mysql.Error as e: 
+        except mysql.Error as e:
             logger.error(f"Database error during authentication for user '{username}': {e}", exc_info=True)
             return None, "Error: A database problem occurred during authentication."
-        except Exception as e: 
+        except Exception as e:
             logger.critical(f"An unexpected application error occurred during authentication for user '{username}': {e}", exc_info=True)
             return None, "Error: An unexpected application error occurred during authentication."
 
@@ -114,7 +116,7 @@ class ToDoListApp:
                 logger.info(f"Task '{task_name}' (ID: {task_id}) added for user_id: {user_id}.")
                 return f"Success: Task '{task_name}' added with ID: {task_id}."
 
-        except mysql.IntegrityError as e: 
+        except mysql.IntegrityError as e:
             logger.error(f"Error adding task for user_id {user_id}: Foreign key constraint failed. {e}", exc_info=True)
             return "Error: The specified user does not exist or there was a data integrity issue."
         except mysql.Error as e:
@@ -150,7 +152,8 @@ class ToDoListApp:
             logger.critical(f"App: An unexpected application error occurred while deleting task ID {task_id} for user_id {user_id}: {e}", exc_info=True)
             return "Error: An unexpected application error occurred while deleting the task."
 
-    def update_task(self, user_id: int, task_id: int, task_name: str = None, due_date: str = None, priority: int = None) -> str:
+    # Added task_status parameter to update_task as discussed
+    def update_task(self, user_id: int, task_id: int, task_name: str = None, due_date: str = None, priority: int = None, task_status: str = None) -> str:
         if not isinstance(user_id, int) or user_id <= 0:
             logger.warning(f"Invalid user_id {user_id} provided for task update.")
             return "Error: Invalid user ID provided."
@@ -173,6 +176,15 @@ class ToDoListApp:
             if not isinstance(priority, int) or not (0 <= priority <= 10): # Example range
                 logger.warning(f"Invalid priority value {priority} for task ID {task_id} (user_id: {user_id}).")
                 return "Error: Priority must be an integer between 0 and 10."
+        
+        validated_task_status = None
+        if task_status is not None:
+            if task_status.lower() in ["pending", "completed"]:
+                validated_task_status = task_status.lower()
+            else:
+                logger.warning(f"Invalid task_status '{task_status}' for task ID {task_id} (user_id: {user_id}).")
+                return "Error: Task status must be 'pending' or 'completed'."
+
 
         try:
             with self.db as conn:
@@ -181,11 +193,12 @@ class ToDoListApp:
                     task_id=task_id,
                     task_name=validated_task_name,
                     due_date=parsed_due_date,
-                    priority=validated_priority
+                    priority=validated_priority,
+                    task_status=validated_task_status # Pass the validated status
                 )
 
                 if updated:
-                    logger.info(f"App: Task ID {task_id} status updated for user ID: {user_id}.")
+                    logger.info(f"App: Task ID {task_id} updated for user ID: {user_id}.")
                     return f"Success: Task ID {task_id} updated."
                 else:
                     logger.info(f"App: Task ID {task_id} not found or no changes applied for user ID: {user_id}.")
@@ -198,28 +211,30 @@ class ToDoListApp:
             logger.critical(f"App: An unexpected application error occurred while updating task ID {task_id} for user ID {user_id}: {e}", exc_info=True)
             return "Error: An unexpected application error occurred while updating the task."
 
-    def get_user_tasks(self, user_id: int) -> str:
+    # FIX THIS METHOD TO RETURN A LIST OF DICTIONARIES AND A MESSAGE
+    def get_user_tasks(self, user_id: int) -> tuple[list[dict] | None, str]: # Corrected return type hint
         if not isinstance(user_id, int) or user_id <= 0:
             logger.warning(f"Invalid user_id {user_id} provided for task retrieval.")
-            return "Error: Invalid user ID provided."
+            return None, "Error: Invalid user ID provided." # Return tuple
 
         try:
-            with self.db as conn: 
-                raw_tasks = conn.get_tasks(user_id)
+            with self.db as conn:
+                raw_tasks = conn.get_tasks(user_id) # This call returns a list of dictionaries from database.py
 
                 if not raw_tasks:
                     logger.info(f"App: No tasks found for user_id {user_id}.")
-                    return "Info: No tasks found for your account."
+                    return [], "Info: No tasks found for your account." # Return empty list and message
 
-                formatted_tasks = [f"ID: {task[0]}, Task: {task[1]}, Status: {task[2]}, Due Date: {task[3]}, Priority: {task[4]}" for task in raw_tasks]
+                # The GUI expects a list of dictionaries, so we just return raw_tasks directly
+                # No need to format into a single string here
                 
-                logger.info(f"App: Successfully retrieved and formatted {len(formatted_tasks)} tasks for user_id {user_id}.")
+                logger.info(f"App: Successfully retrieved {len(raw_tasks)} tasks for user_id {user_id}.")
                 
-                return "Your Tasks:\n" + "\n".join(formatted_tasks)
+                return raw_tasks, "Success: Tasks retrieved." # Return the list of dicts and a message
 
         except mysql.Error as e:
             logger.error(f"App: Database error retrieving tasks for user_id {user_id}: {e}", exc_info=True)
-            return "Error: A database problem occurred while retrieving tasks."
+            return None, "Error: A database problem occurred while retrieving tasks." # Return None and message
         except Exception as e:
             logger.critical(f"App: An unexpected application error occurred while retrieving tasks for user_id {user_id}: {e}", exc_info=True)
-            return "Error: An unexpected application error occurred while retrieving tasks."
+            return None, "Error: An unexpected application error occurred while retrieving tasks." # Return None and message
