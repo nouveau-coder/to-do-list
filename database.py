@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 class Database:
     def __init__(self):
         load_dotenv()
-        db_host = os.getenv('DB_HOST', 'localhost')
-        db_user = os.getenv('DB_USER', 'root')
-        db_password = os.getenv('DB_PASSWORD', '1234')
-        db_name = os.getenv('DB_NAME', 'todo_list')
+        db_host = os.getenv('DB_HOST')
+        db_user = os.getenv('DB_USER')
+        db_password = os.getenv('DB_PASSWORD')
+        db_name = os.getenv('DB_NAME')
 
         self.con = None
         self.cursor = None
@@ -22,9 +22,8 @@ class Database:
                 user=db_user,
                 password=db_password,
                 database=db_name,
-                dictionary=True
             )
-            self.cursor = self.con.cursor()
+            self.cursor = self.con.cursor(dictionary=True)
             logger.info("Database connection established successfully.") # Replaced print
         except mysql.Error as err:
             logger.error(f"Error connecting to database: {err}", exc_info=True) # Replaced print, added exc_info
@@ -40,8 +39,8 @@ class Database:
                 db_user = os.getenv('DB_USER', 'root')
                 db_password = os.getenv('DB_PASSWORD', '1234')
                 db_name = os.getenv('DB_NAME', 'todo_list')
-                self.con = mysql.connect(host=db_host, user=db_user, password=db_password, database=db_name, dictionary=True)
-                self.cursor = self.con.cursor()
+                self.con = mysql.connect(host=db_host, user=db_user, password=db_password, database=db_name)
+                self.cursor = self.con.cursor(dictionary=True)
                 logger.info("Database re-connection established.") # Replaced print
             except mysql.Error as err:
                 logger.error(f"Error during re-connection in __enter__: {err}", exc_info=True) # Replaced print, added exc_info
