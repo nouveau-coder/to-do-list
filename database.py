@@ -74,29 +74,37 @@ class Database:
         return False
 
     def create_tables(self):
-        try:
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL UNIQUE,
-                    password VARCHAR(255) NOT NULL
-                )
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS tasks (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                task VARCHAR(100) NOT NULL,
-                task_status VARCHAR(15) DEFAULT 'pending',
-                due_date DATE,       -- Add this line
-                priority INT,        -- Add this line
-                FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            """)
-            logger.info("Tables checked/created successfully.") 
-        except mysql.Error as err:
-            logger.error(f"Error creating tables: {err}", exc_info=True) 
-            raise
+        tables = {}
+        tables['users'] = (
+            "CREATE TABLE IF NOT EXISTS users ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "name VARCHAR(255) NOT NULL UNIQUE,"
+            "password VARCHAR(255) NOT NULL"
+            ") ENGINE=InnoDB"
+        )
+        tables['tasks'] = (
+            "CREATE TABLE IF NOT EXISTS tasks ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "user_id INT NOT NULL,"
+            "task VARCHAR(255) NOT NULL,"
+            "task_status ENUM('pending', 'completed') DEFAULT 'pending'," # Added status
+            "due_date DATE,"
+            "priority INT,"
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+            ") ENGINE=InnoDB"
+        )
+
+        for name, ddl in tables.items():
+            try:
+                logger.info(f"Creating table {name}: {ddl}")
+                self.cursor.execute(ddl)
+            except mysql.connector.Error as err:
+                if err.errno == mysql.connector.errorcode.ER_TABLE_EXISTS_ERROR:
+                    logger.warning(f"Table {name} already exists, skipping creation.")
+                else:
+                    logger.error(f"Error creating table {name}: {err}", exc_info=True)
+                    raise
     
     def add_user(self, name: str, password_hash: str): 
         try:
@@ -183,36 +191,45 @@ class Database:
             logger.error(f"Database: Error deleting task ID {task_id} for user_id {user_id}: {err}", exc_info=True)
             raise
     
-    def update_task(self, user_id: int, task_id: int, task_name: str = None, due_date: date = None, priority: int = None) -> bool:
+    def update_task(self, user_id: int, task_id: int, task_name: str = None, due_date: date = None, priority: int = None, task_status: str = None) -> bool:
         updates = []
-        params = []
+        values = []
 
         if task_name is not None:
-            updates.append("task = %s") # Use 'task' column name
-            params.append(task_name)
+            updates.append("task = %s")
+            values.append(task_name)
         if due_date is not None:
             updates.append("due_date = %s")
-            params.append(due_date)
+            values.append(due_date)
         if priority is not None:
             updates.append("priority = %s")
-            params.append(priority)
+            values.append(priority)
+        if task_status is not None: # New: Handle task_status
+            updates.append("task_status = %s")
+            values.append(task_status)
 
         if not updates:
-            logger.info(f"No update parameters provided for task ID {task_id} (user_id: {user_id}).")
-            return False
+            logger.info(f"DB: No fields to update for task ID {task_id} (user_id: {user_id}).")
+            return False # Nothing to update
 
-        query = "UPDATE tasks SET " + ", ".join(updates) + " WHERE user_id = %s AND id = %s"
-        params.extend([user_id, task_id]) # Add user_id and task_id to the parameters
+        sql_query = f"UPDATE tasks SET {', '.join(updates)} WHERE id = %s AND user_id = %s"
+        values.extend([task_id, user_id])
 
         try:
-            self.cursor.execute(query, tuple(params))
+            self.cursor.execute(sql_query, tuple(values))
+            return self.cursor.rowcount > 0 # Returns True if a row was updated
+        except mysql.connector.Error as e:
+            logger.error(f"DB: Error updating task {task_id} for user {user_id}: {e}", exc_info=True)
+            return False
 
-            if self.cursor.rowcount > 0:
-                logger.info(f"Database: Task ID {task_id} updated successfully for user_id {user_id}.")
-                return True
-            else:
-                logger.info(f"Database: Task ID {task_id} not found or no changes applied for user_id {user_id}.")
-                return False
-        except mysql.Error as err:
-            logger.error(f"Database: Error updating task ID {task_id} for user_id {user_id}: {err}", exc_info=True)
-            raise
+    def get_tasks(self, user_id: int) -> list[dict]:
+        """Retrieves all tasks for a specific user."""
+        try:
+            self.cursor.execute(
+                "SELECT id, task, task_status, due_date, priority FROM tasks WHERE user_id = %s",
+                (user_id,)
+            )
+            return self.cursor.fetchall() # Returns list of dictionaries
+        except mysql.connector.Error as e:
+            logger.error(f"DB: Error retrieving tasks for user {user_id}: {e}", exc_info=True)
+            return [] # Return empty list on error
